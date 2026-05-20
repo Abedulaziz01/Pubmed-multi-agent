@@ -8,13 +8,32 @@ CACHE_PATH = Path("data/mesh_terms.json")
 
 def _load_cache() -> dict:
     if CACHE_PATH.exists():
-        with open(CACHE_PATH, "r") as f:
-            return json.load(f)
+        with open(CACHE_PATH, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return {}
+            return json.loads(content)
     return {}
 
 def _save_cache(cache: dict):
-    with open(CACHE_PATH, "w") as f:
+    with open(CACHE_PATH, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=2)
+
+def _llm_fallback_mesh(term: str, call_llm_fn) -> list[str]:
+    prompt = f"""Return the official MeSH (Medical Subject Headings) term for: "{term}"
+Return ONLY valid JSON, no markdown, no explanation.
+Format: {{"mesh_terms": ["Term1", "Term2"]}}
+If unknown return {{"mesh_terms": []}}"""
+
+    response = call_llm_fn(
+        "You are a medical librarian expert in MeSH vocabulary.",
+        prompt
+    )
+    try:
+        cleaned = response.strip().strip("```json").strip("```").strip()
+        return json.loads(cleaned).get("mesh_terms", [])
+    except Exception:
+        return []
 
 def lookup_mesh_term(plain_term: str) -> list[str]:
     term_lower = plain_term.lower().strip()
@@ -44,10 +63,12 @@ def lookup_mesh_term(plain_term: str) -> list[str]:
         id_list = data.get("esearchresult", {}).get("idlist", [])
 
         if not id_list:
-            print(f"[NCBI] No MeSH IDs found for '{plain_term}'")
-            cache[term_lower] = []
+            print(f"[NCBI] No MeSH IDs found for '{plain_term}' — trying LLM fallback")
+            from core.llm_client import call_llm
+            mesh_terms = _llm_fallback_mesh(plain_term, call_llm)
+            cache[term_lower] = mesh_terms
             _save_cache(cache)
-            return []
+            return mesh_terms
 
         mesh_terms = _fetch_mesh_names(id_list)
 
@@ -83,7 +104,6 @@ def _fetch_mesh_names(id_list: list[str]) -> list[str]:
                 if name:
                     names.append(name[0])
                 else:
-                    # fallback to ds_idxlinks or the raw name field
                     raw = result[uid].get("ds_name", "")
                     if raw:
                         names.append(raw)

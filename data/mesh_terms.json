@@ -1,7 +1,31 @@
 {
+  "heart attack": [
+    "Myocardial Infarction"
+  ],
+  "kids": [
+    "Child"
+  ],
+  "walking": [
+    "Mobility Limitation",
+    "Chromosome Walking",
+    "Walking"
+  ],
+  "cancer treatment": [
+    "Antineoplastic Protocols",
+    "Neoplasms, Second Primary",
+    "Breast Cancer Lymphedema"
+  ],
+  "teenagers": [
+    "Adolescent"
+  ],
   "depression": [
     "Depressive Disorder, Treatment-Resistant",
     "Economic Recession",
     "Long-Term Synaptic Depression"
+  ],
+  "exercise": [
+    "Circuit-Based Exercise",
+    "Vocal Cord Dysfunction",
+    "Cool-Down Exercise"
   ]
 }
