@@ -4,10 +4,10 @@ from typing import Optional
 from core.llm_client import call_llm
 
 class PICOResult(BaseModel):
-    population: str
-    intervention: str
+    population: Optional[str] = ""
+    intervention: Optional[str] = ""
     comparison: Optional[str] = None
-    outcome: str
+    outcome: Optional[str] = ""
     original_query: str
 
 SYSTEM_PROMPT = """You are a medical research assistant specializing in PICO framework extraction.
