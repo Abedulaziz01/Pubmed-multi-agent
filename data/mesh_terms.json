@@ -10,11 +10,6 @@
     "Chromosome Walking",
     "Walking"
   ],
-  "cancer treatment": [
-    "Antineoplastic Protocols",
-    "Neoplasms, Second Primary",
-    "Breast Cancer Lymphedema"
-  ],
   "teenagers": [
     "Adolescent"
   ],
@@ -27,5 +22,10 @@
     "Circuit-Based Exercise",
     "Vocal Cord Dysfunction",
     "Cool-Down Exercise"
+  ],
+  "cancer treatment": [
+    "Antineoplastic Protocols",
+    "Neoplasms, Second Primary",
+    "Breast Cancer Lymphedema"
   ]
 }
