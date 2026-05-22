@@ -27,5 +27,36 @@
     "Antineoplastic Protocols",
     "Neoplasms, Second Primary",
     "Breast Cancer Lymphedema"
+  ],
+  "improvement in depression symptoms": [
+    "Depression",
+    "Treatment Outcome",
+    "Remission, Spontaneous"
+  ],
+  "teenagers with depression": [
+    "Depressive Disorder",
+    "Adolescent"
+  ],
+  "individuals with back pain": [
+    "Low Back Pain",
+    "Back Pain"
+  ],
+  "reduction in back pain": [
+    "Low Back Pain",
+    "Pain Reduction"
+  ],
+  "children with fever": [
+    "Fever",
+    "Child"
+  ],
+  "aspirin": [
+    "Asthma, Aspirin-Induced",
+    "Sodium Salicylate",
+    "Diflunisal"
+  ],
+  "reduction in fever": [
+    "Antipyretics",
+    "Fever/therapy",
+    "Body Temperature Regulation"
   ]
 }
