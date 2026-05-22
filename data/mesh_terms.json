@@ -23,11 +23,6 @@
     "Vocal Cord Dysfunction",
     "Cool-Down Exercise"
   ],
-  "cancer treatment": [
-    "Antineoplastic Protocols",
-    "Neoplasms, Second Primary",
-    "Breast Cancer Lymphedema"
-  ],
   "improvement in depression symptoms": [
     "Depression",
     "Treatment Outcome",
@@ -56,5 +51,10 @@
     "Antipyretics",
     "Fever/therapy",
     "Body Temperature Regulation"
+  ],
+  "cancer treatment": [
+    "Antineoplastic Protocols",
+    "Neoplasms, Second Primary",
+    "Breast Cancer Lymphedema"
   ]
 }
