@@ -79,7 +79,30 @@ Example output:
 ("Adolescent"[MeSH] OR "teenager"[tiab]) AND ("Exercise"[MeSH] OR "physical activity"[tiab]) AND ("Depression"[MeSH] OR "depressive disorder"[tiab])
 """
 
+def _clean_query(query: str) -> str:
+    import re
 
+    # fix AND inside parentheses between two MeSH/tiab terms — replace with OR
+    # pattern: ("X"[tag] AND "Y"[tag])
+    def fix_inner_and(match):
+        inner = match.group(1)
+        if inner.count("[MeSH]") + inner.count("[tiab]") >= 2:
+            fixed = re.sub(r'\bAND\b', 'OR', inner)
+            return f"({fixed})"
+        return match.group(0)
+
+    query = re.sub(r'\(([^()]+)\)', fix_inner_and, query)
+
+    # remove duplicate concept blocks
+    # split by AND, deduplicate, rejoin
+    blocks = [b.strip() for b in query.split(" AND ")]
+    seen = []
+    for block in blocks:
+        normalized = block.lower().strip("() ")
+        if normalized not in [s.lower().strip("() ") for s in seen]:
+            seen.append(block)
+
+    return " AND ".join(seen)
 def build_query(pico: PICOResult, mesh_result: MeSHResult) -> QueryResult:
     print(f"\n[Agent 3] Building query for: {pico.original_query}")
 

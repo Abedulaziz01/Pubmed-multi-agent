@@ -6,6 +6,27 @@ import config
 
 CACHE_PATH = Path("data/mesh_terms.json")
 
+# MeSH terms that sound relevant but are wrong context — always filter these out
+MESH_BLOCKLIST = [
+    "Chromosome Walking",
+    "Pain Measurement",
+    "Pain Perception",
+    "Mobility Limitation",
+]
+
+PREFER_EXACT = [
+    "Walking",
+    "Running",
+    "Exercise",
+    "Depression",
+    "Anxiety",
+    "Child",
+    "Adolescent",
+    "Aspirin",
+    "Low Back Pain",
+    "Headache",
+]
+
 
 def _load_cache() -> dict:
     if CACHE_PATH.exists():
@@ -17,6 +38,19 @@ def _load_cache() -> dict:
 def _save_cache(cache: dict):
     with open(CACHE_PATH, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=2)
+
+
+def _filter_mesh_terms(terms: list[str]) -> list[str]:
+    filtered = [t for t in terms if t not in MESH_BLOCKLIST]
+
+    # sort so preferred exact terms come first
+    filtered.sort(key=lambda x: (
+        0 if x in PREFER_EXACT else
+        1 if not any(bad in x for bad in ["Chromosome", "Limitation", "Measurement", "Perception"]) else
+        2
+    ))
+
+    return filtered
 
 
 def lookup_mesh_term(plain_term: str) -> list[str]:
@@ -51,6 +85,7 @@ def lookup_mesh_term(plain_term: str) -> list[str]:
             return []
 
         mesh_terms = _fetch_mesh_names(id_list)
+        mesh_terms = _filter_mesh_terms(mesh_terms)
         cache[term_lower] = mesh_terms
         _save_cache(cache)
         time.sleep(0.34)
