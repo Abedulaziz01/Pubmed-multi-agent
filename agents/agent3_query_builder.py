@@ -1,3 +1,4 @@
+import re
 from pydantic import BaseModel
 from typing import Optional
 from core.llm_client import call_llm
@@ -55,6 +56,26 @@ def _clean_llm_output(raw: str) -> str:
     return cleaned
 
 
+def _clean_query(query: str) -> str:
+    def fix_inner_and(match):
+        inner = match.group(1)
+        if inner.count("[MeSH]") + inner.count("[tiab]") >= 2:
+            fixed = re.sub(r'\bAND\b', 'OR', inner)
+            return f"({fixed})"
+        return match.group(0)
+
+    query = re.sub(r'\(([^()]+)\)', fix_inner_and, query)
+
+    blocks = [b.strip() for b in query.split(" AND ")]
+    seen = []
+    for block in blocks:
+        normalized = block.lower().strip("() ")
+        if normalized not in [s.lower().strip("() ") for s in seen]:
+            seen.append(block)
+
+    return " AND ".join(seen)
+
+
 QUERY_BUILDER_PROMPT = """You are a PubMed search expert. Your job is to build a valid PubMed query string.
 
 PubMed query rules you must follow:
@@ -71,6 +92,7 @@ PubMed query rules you must follow:
 You will receive:
 - PICO components (Population, Intervention, Comparison, Outcome)
 - MeSH term mappings for each plain English term
+- Optional: past user interaction suggestions to improve the query
 
 Your output must be ONLY the raw query string. No explanation. No markdown. No code fences.
 Just the query string itself, ready to paste into PubMed.
@@ -79,36 +101,23 @@ Example output:
 ("Adolescent"[MeSH] OR "teenager"[tiab]) AND ("Exercise"[MeSH] OR "physical activity"[tiab]) AND ("Depression"[MeSH] OR "depressive disorder"[tiab])
 """
 
-def _clean_query(query: str) -> str:
-    import re
 
-    # fix AND inside parentheses between two MeSH/tiab terms — replace with OR
-    # pattern: ("X"[tag] AND "Y"[tag])
-    def fix_inner_and(match):
-        inner = match.group(1)
-        if inner.count("[MeSH]") + inner.count("[tiab]") >= 2:
-            fixed = re.sub(r'\bAND\b', 'OR', inner)
-            return f"({fixed})"
-        return match.group(0)
+def build_query(
+    pico: PICOResult,
+    mesh_result: MeSHResult,
+    feedback_context: str = ""
+) -> QueryResult:
 
-    query = re.sub(r'\(([^()]+)\)', fix_inner_and, query)
-
-    # remove duplicate concept blocks
-    # split by AND, deduplicate, rejoin
-    blocks = [b.strip() for b in query.split(" AND ")]
-    seen = []
-    for block in blocks:
-        normalized = block.lower().strip("() ")
-        if normalized not in [s.lower().strip("() ") for s in seen]:
-            seen.append(block)
-
-    return " AND ".join(seen)
-def build_query(pico: PICOResult, mesh_result: MeSHResult) -> QueryResult:
     print(f"\n[Agent 3] Building query for: {pico.original_query}")
+
+    if feedback_context:
+        print(f"[Agent 3] Feedback context received:\n{feedback_context}")
 
     mesh_summary = ""
     for term, mappings in mesh_result.mesh_mappings.items():
         mesh_summary += f"  Plain term: '{term}' -> MeSH terms: {mappings}\n"
+
+    feedback_section = f"\n\nLearnings from past searches:\n{feedback_context}" if feedback_context else ""
 
     user_prompt = f"""Build a PubMed query for this research question:
 
@@ -121,7 +130,7 @@ PICO breakdown:
 - Outcome: {pico.outcome}
 
 MeSH term mappings:
-{mesh_summary}
+{mesh_summary}{feedback_section}
 
 Return only the query string. Nothing else."""
 
@@ -129,6 +138,7 @@ Return only the query string. Nothing else."""
     print(f"[Agent 3] Raw LLM output: {raw_response}")
 
     query_string = _clean_llm_output(raw_response)
+    query_string = _clean_query(query_string)
 
     has_tag = "[MeSH]" in query_string or "[tiab]" in query_string
     if not has_tag:
@@ -145,6 +155,7 @@ Return only the corrected query string now:"""
 
         raw_retry = call_llm(QUERY_BUILDER_PROMPT, retry_prompt)
         query_string = _clean_llm_output(raw_retry)
+        query_string = _clean_query(query_string)
         print(f"[Agent 3] Retry output: {query_string}")
 
     if not is_balanced(query_string):

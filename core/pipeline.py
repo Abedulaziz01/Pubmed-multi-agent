@@ -6,6 +6,10 @@ from agents.agent1_interpreter import extract_pico, PICOResult
 from agents.agent2_mesh_suggester import suggest_mesh, MeSHResult
 from agents.agent3_query_builder import build_query, QueryResult
 from agents.agent4_finder import find_papers, PaperResult
+from agents.agent5_feedback_learner import (
+    suggest_query_improvements,
+    format_suggestions_for_prompt
+)
 
 
 class AgentTiming(BaseModel):
@@ -26,6 +30,7 @@ class PipelineResult(BaseModel):
     success: bool = True
     error_message: Optional[str] = None
     failed_at_agent: Optional[str] = None
+    feedback_suggestions: dict = {}
 
 
 def run_pipeline(user_query: str) -> PipelineResult:
@@ -72,11 +77,26 @@ def run_pipeline(user_query: str) -> PipelineResult:
         print(f"[Pipeline] ERROR in Agent 2: {e}")
         return result
 
+    # --- Agent 5: Get feedback suggestions before Agent 3 ---
+    try:
+        print("\n[Pipeline] Checking Agent 5 for past learnings...")
+        suggestions = suggest_query_improvements(user_query)
+        result.feedback_suggestions = suggestions
+        feedback_context = format_suggestions_for_prompt(suggestions)
+        if feedback_context:
+            print(f"[Pipeline] Agent 5 has suggestions — passing to Agent 3")
+        else:
+            print(f"[Pipeline] Agent 5 has no suggestions yet (cold start)")
+            feedback_context = ""
+    except Exception as e:
+        print(f"[Pipeline] Agent 5 check failed (non-critical): {e}")
+        feedback_context = ""
+
     # --- Agent 3: Query Builder ---
     try:
         print("\n[Pipeline] Running Agent 3: Query Builder...")
         t0 = time.time()
-        query = build_query(pico, mesh)
+        query = build_query(pico, mesh, feedback_context=feedback_context)
         result.pubmed_query = query
         result.timing.agent3_seconds = round(time.time() - t0, 2)
         print(f"[Pipeline] Agent 3 done in {result.timing.agent3_seconds}s")
@@ -106,7 +126,6 @@ def run_pipeline(user_query: str) -> PipelineResult:
         result.error_message = f"Agent 4 failed: {str(e)}"
         result.timing.total_seconds = round(time.time() - pipeline_start, 2)
         print(f"[Pipeline] ERROR in Agent 4: {e}")
-        # return partial result — we still have pico, mesh, query even if finder failed
         return result
 
     result.timing.total_seconds = round(time.time() - pipeline_start, 2)
