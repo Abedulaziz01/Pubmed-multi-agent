@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 from datetime import datetime
+from datetime import datetime, timezone
 
 DB_PATH = Path("storage/feedback.db")
 
@@ -68,7 +69,7 @@ def record_interaction(
         action,
         query_string,
         ",".join(mesh_terms) if mesh_terms else "",
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).isoformat()
     ))
 
     conn.commit()
